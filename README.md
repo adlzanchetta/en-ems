@@ -1,91 +1,69 @@
-# Entropy-Based Ensemble Members SElection
+# ebemse | *Entropy-Based Ensemble Members SElection*
 
-Derived from Pedram's work
+*ebemse* is a Python library for the selection of a set of mutually exclusive, collectivelly exaustive (MECE) ensemble members.
 
-## Getting started
+The library implements the approach presented by [Darbandsari and Coulibaly (2021)](http://doi.org/https://doi.org/10.1016/j.jhydrol.2020.125577) as step that antecedes the further merging of a set of ensemble forecasts.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Installing
 
-## Add your files
+The library can be installed using the traditional pip:
 
-- [ ] [Create](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+    pip install ebemse
+
+And is listed on the Python Package Index (*pypi*) at []().
+
+
+## Using
+
+Suppose you have a file named ```example.csv``` with the following content:
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/adlzanchetta_phd-codes/ebemse.git
-git branch -M main
-git push -uf origin main
+Date,       Memb_A, Memb_B, ...,  Memb_Z, Obsv
+2020/05/15, 1.12,   1.05,   ...,  0.5,    1.01
+2020/05/16, 1.15,   1.12,   ...,  0.9,    1.10
+2020/05/17, 1.13,   1.32,   ...,  1.1,    1.29
+...         ...     ...     ...,  ...,    ...
+2020/11/30, 1.22,   0.95,   ...,  0.3,    0.87
 ```
 
-## Integrate with your tools
+In which the columns starting with "Memb_" hold the realization of one ensemble member for the time interval and "Obsv" holds the observed values for the same time interval.
 
-- [ ] [Set up project integrations](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/project/integrations/)
+If your our objective is to select a MECE set considering obaservations, it can be done using the standard parameters by:
 
-## Collaborate with your team
+```
+import pandas as pd
+import ebemse
 
-- [ ] [Invite team members and collaborators](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Automatically merge when pipeline succeeds](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+# read file
+data_ensemble = pd.read_csv("example.csv").to_dict('list')
+data_obsv = data_ensemble["Obsv"]
+del data_ensemble["Obsv"], data_ensemble["Date"]
 
-## Test and Deploy
+# perform selection
+selected_members = ebemse.select_ensemble_members(data_ensemble, data_obsv)
+```
 
-Use the built-in continuous integration in GitLab.
+The variable ```selected_members``` will be a dictionary with the following keys and values:
 
-- [ ] [Get started with GitLab CI/CD](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://docs.gitlab.com/ee/user/clusters/agent/)
+- **history**: dictionary with the following additional information related with the selection process:
+	- **total_correlation**: list of floats
+	- **joint_entropy**: list of floats
+	- **transinformation**: list of floats or ```None```
+- **selected_members**: list of string with the labels of the selected elements
+- **original_ensemble_joint_entropy**: float
 
-***
 
-# Editing this README
+## Further information
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!).  Thank you to [makeareadme.com](https://gitlab.com/-/experiment/new_project_readme_content:0e96b1080f2a24b4a48e6efd5f2ae34a?https://www.makeareadme.com/) for this template.
+### select\_ensemble\_members()
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
-
+Arguments:
+- all_ensemble_members: dict
+- observations: Union[list, tuple, np.array, None] (default: *None*)
+- n_bins: Union[int, None] (default: *10*)
+- bin_by: str (default: *"quantile_individual"*)
+- beta_threshold: float (default: *0.9*)
+- n_processes: int (default: *1*)
+- minimum_n_members: int (default: *2*)
+- verbose: bool (default: *False*)
