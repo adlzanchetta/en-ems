@@ -55,12 +55,6 @@ def _discretize_if_needed(data: Union[dict, None], n_bins: Union[int, None], bin
     labels = list(string.ascii_uppercase[0:n_bins])
     if bin_by == 'quantile_individual':
         ret_dict = dict([(k, list(pd.qcut(v, n_bins, labels=labels))) for k, v in data.items()])
-        '''
-        ret_dict = {}
-        for k, v in data.items():
-            cur_class = pd.qcut(v, n_bins, labels=labels)
-            ret_dict[k] = list(cur_class)
-        '''
         return ret_dict
 
     elif bin_by == 'quantile_total':
