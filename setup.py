@@ -1,5 +1,8 @@
 import setuptools
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setuptools.setup(
     name="en-ems",
     version="0.1.1",
@@ -7,7 +10,8 @@ setuptools.setup(
     author="Andre D. L. Zanchetta",
     author_email="adlzanchetta@gmail.com",
     description="A package for selecting ensemble members using entropy theory",
-    long_description=open("README.md").read(),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=["pyitlib==0.2.2", "scikit-learn==0.23"],
     classifiers=[

@@ -13,7 +13,7 @@ The library can be installed using the traditional pip:
 
     pip install en-ems
 
-And is listed on the Python Package Index (*pypi*) at []().
+And is listed on the Python Package Index (*pypi*) as [en-ems](https://pypi.org/project/en-ems/).
 
 
 ## Using
@@ -58,4 +58,4 @@ The variable ```selected_members``` will be a dictionary with the following keys
 
 ## Further documentation
 
-Further information can be found in the [docs](docs/) folder of this project.
+Further information can be found in the *docs* folder of this project.
