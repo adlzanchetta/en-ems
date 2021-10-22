@@ -1,15 +1,17 @@
-# ebemse | *Entropy-Based Ensemble Members SElection*
+# En-EMS | *Entropy-based Ensemble Members Selection*
 
-*ebemse* is a Python library for the selection of a set of mutually exclusive, collectivelly exaustive (MECE) ensemble members.
+*en-ems* is a Python library for the selection of a set of mutually exclusive, collectivelly exaustive (MECE) ensemble members.
 
-The library implements the approach presented by [Darbandsari and Coulibaly (2021)](http://doi.org/https://doi.org/10.1016/j.jhydrol.2020.125577) as step that antecedes the further merging of a set of ensemble forecasts.
+The library implements the approach presented by [Darbandsari and Coulibaly (2020)](http://doi.org/https://doi.org/10.1016/j.jhydrol.2020.125577) as step that antecedes the further merging of a set of ensemble forecasts.
+
+The *en-ems* package is built over the [pyitlib](https://pypi.org/project/pyitlib/) package, which implements fundamental information theory methods.
 
 
 ## Installing
 
 The library can be installed using the traditional pip:
 
-    pip install ebemse
+    pip install en-ems
 
 And is listed on the Python Package Index (*pypi*) at []().
 
@@ -33,7 +35,7 @@ If your our objective is to select a MECE set considering obaservations, it can 
 
 ```
 import pandas as pd
-import ebemse
+import enems
 
 # read file
 data_ensemble = pd.read_csv("example.csv").to_dict('list')
@@ -41,7 +43,7 @@ data_obsv = data_ensemble["Obsv"]
 del data_ensemble["Obsv"], data_ensemble["Date"]
 
 # perform selection
-selected_members = ebemse.select_ensemble_members(data_ensemble, data_obsv)
+selected_members = enems.select_ensemble_members(data_ensemble, data_obsv)
 ```
 
 The variable ```selected_members``` will be a dictionary with the following keys and values:
@@ -54,16 +56,6 @@ The variable ```selected_members``` will be a dictionary with the following keys
 - **original_ensemble_joint_entropy**: float
 
 
-## Further information
+## Further documentation
 
-### select\_ensemble\_members()
-
-Arguments:
-- all_ensemble_members: dict
-- observations: Union[list, tuple, np.array, None] (default: *None*)
-- n_bins: Union[int, None] (default: *10*)
-- bin_by: str (default: *"quantile_individual"*)
-- beta_threshold: float (default: *0.9*)
-- n_processes: int (default: *1*)
-- minimum_n_members: int (default: *2*)
-- verbose: bool (default: *False*)
+Further information can be found in the [docs](docs/) folder of this project.
