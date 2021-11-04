@@ -1,4 +1,6 @@
+from numpy.core.fromnumeric import argmin
 from pyitlib import discrete_random_variable
+from multiprocessing import Pool
 from typing import Tuple, Union
 import pkg_resources
 import pandas as pd
@@ -53,7 +55,8 @@ def _discretize_if_needed(data: Union[dict, None], n_bins: Union[int, None], bin
         return copy.deepcopy(data)
     
     # applies bin approach
-    labels = list(string.ascii_uppercase[0:n_bins])
+    # labels = [int(l) for l in list(string.ascii_uppercase[0:n_bins])]
+    labels = list(range(n_bins))
 
     if bin_by == 'quantile_individual':
         ret_dict = dict([(k, list(pd.qcut(v, n_bins, labels=labels))) for k, v in data.items()])
@@ -75,9 +78,22 @@ def _discretize_if_needed(data: Union[dict, None], n_bins: Union[int, None], bin
         raise ValueError("Binning by '%s' not supported." % bin_by)
 
 
+def _get_total_correlation(arg_list) -> float:
+    """
+    """
+
+    cur_member_out, ensemble_members = arg_list
+
+    # calculate total correlation
+    all_ensemble_values = [v for k, v in ensemble_members.items() if k != cur_member_out]
+    cur_total_correlation = discrete_random_variable.information_multi(all_ensemble_values)
+    del all_ensemble_values
+
+    return cur_total_correlation
+
+
 def _stop_criteria(ensemble_members: dict, observations: Union[list, tuple, np.array, None],
-                   full_ensemble_joint_entropy: float, beta_threshold: float, verbose: bool = False) -> \
-    bool:
+                   full_ensemble_joint_entropy: float, beta_threshold: float, verbose: bool = False) -> bool:
     """
     Evaluate if both joint entropy and transinformation are higher than the beta_threshold
     """
@@ -108,24 +124,25 @@ def _select_winner_ensemble_set(ensemble_members: dict, n_processes: int) -> Tup
     """
 
     if n_processes == 1:
-        min_total_correlation, winner_ensemble_subset = np.inf, None
-        for cur_member_out in ensemble_members.keys():
+        
+        min_total_correlation, total_correlations, all_member_ids = np.inf, [], sorted(list(ensemble_members.keys()))
+        for cur_member_out in all_member_ids:
+            total_correlations.append(_get_total_correlation((cur_member_out, ensemble_members)))
 
-            # copy entire set of members and remove current evaluated member
-            cur_ensemble_subset = copy.deepcopy(ensemble_members)
-            del cur_ensemble_subset[cur_member_out]
-
-            # calculate total correlation
-            all_ensemble_values = list(cur_ensemble_subset.values())
-            cur_total_correlation = discrete_random_variable.information_multi(all_ensemble_values)
-            del all_ensemble_values
-            
-            # update winnerif is is the case
-            if (winner_ensemble_subset is None) or (cur_total_correlation < min_total_correlation ):
-                min_total_correlation, winner_ensemble_subset = cur_total_correlation, cur_ensemble_subset
-            del cur_member_out, cur_ensemble_subset, cur_total_correlation
     else:
-        raise NotImplementedError("No support for parallel processing yet.")
+
+        # adjust parallel args and call it using the pool of processes
+        parallel_args = [(cur_member_id, ensemble_members) for cur_member_id in ensemble_members.keys()]
+        with Pool(n_processes) as processes_pool:
+            total_correlations = processes_pool.map(_get_total_correlation, parallel_args)
+        all_member_ids = [v[0] for v in parallel_args]
+        del parallel_args
+        
+    # identify the winner
+    min_total_correlation, min_correlation_idx = min(total_correlations), argmin(total_correlations)
+    winner_ensemble_subset = copy.deepcopy(ensemble_members)
+
+    del winner_ensemble_subset[all_member_ids[min_correlation_idx]]
 
     return winner_ensemble_subset, min_total_correlation
 
@@ -160,7 +177,7 @@ def select_ensemble_members(all_ensemble_members: dict, observations: Union[list
     disc_observations = _discretize_if_needed(observations, n_bins, bin_by)
 
     # calculate joint entropy of the original ensemble set
-    full_ensemble_joint_entropy = discrete_random_variable.entropy_joint(list(all_ensemble_members.values()))
+    full_ensemble_joint_entropy = discrete_random_variable.entropy_joint(list(disc_ensemble_members_remaining.values()))
 
     # create empty accumulator variables
     total_correlations, joint_entropies, transinformations = [], [], []
