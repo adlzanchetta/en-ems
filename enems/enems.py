@@ -5,7 +5,6 @@ from typing import Tuple, Union
 import pkg_resources
 import pandas as pd
 import numpy as np
-import string
 import copy
 
 # ## PRIVATE METHODS ################################################################################################# #
@@ -41,7 +40,7 @@ def _interval_contains(interval: pd.Interval, value: float) -> bool:
         return False
 
 
-def _discretize_if_needed(data: Union[dict, None], n_bins: Union[int, None], bin_by: str) -> dict:
+def _discretize_ensemble_only(data: Union[dict, None], n_bins: Union[int, None], bin_by: str) -> dict:
     """
     
     """
@@ -84,6 +83,48 @@ def _discretize_if_needed(data: Union[dict, None], n_bins: Union[int, None], bin
         raise ValueError("Binning by '%s' not supported." % bin_by)
 
 
+def _discretize_ensemble_and_obsevations(ensemble_data: Union[dict, None], observed_data: Union[list, tuple, np.array, 
+            None], n_bins: Union[int, None], bin_by: str) -> Tuple[dict, list]:
+    """
+    
+    :return: dict with {ensemble_id: list(ensemble data categorized)} and list of observed data categorized
+    """
+
+    # basic check
+    if n_bins is None:
+        return copy.deepcopy(ensemble_data), observed_data
+    
+    # applies bin approach
+    labels = list(range(n_bins))
+    if bin_by == 'quantile_individual':
+        ret_dict = dict([(k, list(pd.qcut(v, n_bins, labels=labels))) for k, v in ensemble_data.items()])
+        ret_obsv = list(pd.qcut(observed_data, n_bins, labels=labels))
+        return ret_dict, ret_obsv
+    
+    elif bin_by == 'quantile_total':
+        # define intervals
+        all_values = np.array([v for v in ensemble_data.values()] + [observed_data, ]).flatten()
+        intervals = sorted(list(set(pd.qcut(all_values, n_bins))))
+        del all_values
+
+        # categorize
+        return dict([(k, _categorize_by_intervals(v, intervals, labels)) for k, v in ensemble_data.items()]), \
+                    _categorize_by_intervals(observed_data, intervals, labels)
+    
+    elif bin_by == 'equal_intervals':
+        # define intervals
+        all_values = np.array([v for v in ensemble_data.values()] + [observed_data, ]).flatten()
+        intervals = sorted(list(set(pd.cut(all_values, bins=n_bins))))
+        del all_values
+
+        # categorize
+        return dict([(k, _categorize_by_intervals(v, intervals, labels)) for k, v in ensemble_data.items()]), \
+                    _categorize_by_intervals(observed_data, intervals, labels)
+
+    else:
+        raise ValueError("Binning by '%s' not supported." % bin_by)
+
+
 def _get_total_correlation(arg_list) -> float:
     """
     """
@@ -99,7 +140,8 @@ def _get_total_correlation(arg_list) -> float:
 
 
 def _stop_criteria(ensemble_members: dict, observations: Union[list, tuple, np.array, None],
-                   full_ensemble_joint_entropy: float, beta_threshold: float, verbose: bool = False) -> bool:
+                   full_ensemble_joint_entropy: float, full_ensemble_transinformation: Union[float, None],
+                   beta_threshold: float, verbose: bool = False) -> bool:
     """
     Evaluate if both joint entropy and transinformation are higher than the beta_threshold
     """
@@ -114,12 +156,20 @@ def _stop_criteria(ensemble_members: dict, observations: Union[list, tuple, np.a
         (len(ensemble_members), joint_entropy, full_ensemble_joint_entropy, joint_entropy_ratio)) if verbose else None
 
     # calculate transinformation if needed
-    transinformation = None if observations is None else \
-        discrete_random_variable.information_mutual(ensemble_members_values, observations)
-    stop_due_transinformation = True if ((transinformation is None) or (transinformation <= beta_threshold)) else False
+    if (observations is None) or (full_ensemble_transinformation is None):
+        transinformation, transinfo_ratio = None, 0
+    else:
+        transinformation = discrete_random_variable.information_mutual(ensemble_members_values, observations,
+                                                                       cartesian_product=True)
+        transinformation = np.mean(transinformation)
+        transinfo_ratio = transinformation / full_ensemble_transinformation
+
+    # stop_due_transinformation = True if ((transinformation is None) or (transinfo_ratio <= beta_threshold)) else False  # AND case (as in work)
+    stop_due_transinformation = False if ((transinformation is None) or (transinfo_ratio > beta_threshold)) else True     # OR case (as interpreted)
 
     # define final stop decision
-    stop = True if (stop_due_joint_entropy and stop_due_transinformation) else False
+    # stop = True if (stop_due_joint_entropy and stop_due_transinformation) else False  # AND case (as in work)
+    stop = True if (stop_due_joint_entropy or stop_due_transinformation) else False     # OR case (as interpreted)
 
     return joint_entropy, transinformation, stop
 
@@ -155,13 +205,22 @@ def _select_winner_ensemble_set(ensemble_members: dict, n_processes: int) -> Tup
 
 # ## PUBLIC METHODS ################################################################################################## #
 
-def load_data_75():
+def load_data_75() -> pd.DataFrame:
     """
     Return a Pandas DataFrame with series of 75 ensemble members.
     """
     # This is a stream-like object. If you want the actual info, call
     # stream.read()
     stream = pkg_resources.resource_stream(__name__, 'example_data/ensemble_set_75.pickle')
+    return pd.read_pickle(stream)
+
+
+def load_data_obs(suffix: str = 'a') -> pd.Series:
+    """
+    Return a Pandas Series with series of 75 ensemble members.
+    """
+    
+    stream = pkg_resources.resource_stream(__name__, 'example_data/ensemble_set_75_obs_%s.pickle' % suffix)
     return pd.read_pickle(stream)
     
 
@@ -185,9 +244,18 @@ def select_ensemble_members(all_ensemble_members: dict, observations: Union[list
         raise ValueError("Argument 'minimum_n_members' must be a integer equal or bigger than 2. Got: {0} ({1}).".format(
             minimum_n_members, type(minimum_n_members)))
 
-    # discretize data if needed
-    disc_ensemble_members_remaining = _discretize_if_needed(all_ensemble_members, n_bins, bin_by)
-    disc_observations = _discretize_if_needed(observations, n_bins, bin_by)
+    # discretize data
+    if observations is None:
+        disc_ensemble_members_remaining = _discretize_ensemble_only(all_ensemble_members, n_bins, bin_by)
+        disc_observations, full_ensemble_transinformation = None, None
+    else:
+        disc_ensemble_members_remaining, disc_observations = _discretize_ensemble_and_obsevations(all_ensemble_members,
+            observations, n_bins, bin_by)
+        ensemble_members_values = list(disc_ensemble_members_remaining.values())
+        full_ensemble_transinformation = discrete_random_variable.information_mutual(ensemble_members_values, 
+            disc_observations, cartesian_product=True)
+        full_ensemble_transinformation = np.mean(full_ensemble_transinformation)
+        del ensemble_members_values
 
     # calculate joint entropy of the original ensemble set
     full_ensemble_joint_entropy = discrete_random_variable.entropy_joint(list(disc_ensemble_members_remaining.values()))
@@ -198,6 +266,7 @@ def select_ensemble_members(all_ensemble_members: dict, observations: Union[list
     # enters iterative loop
     print("Starting with %d ensemble members." % len(disc_ensemble_members_remaining)) if verbose else None
     while len(disc_ensemble_members_remaining) > minimum_n_members:
+
         # identifies winner
         print(" Identifying winner set.") if verbose else None
         disc_ensemble_members_remaining, total_corr = _select_winner_ensemble_set(disc_ensemble_members_remaining,
@@ -206,8 +275,7 @@ def select_ensemble_members(all_ensemble_members: dict, observations: Union[list
 
         # check stopping criteria
         joint_entropy, transinformation, stop = _stop_criteria(disc_ensemble_members_remaining, disc_observations,
-                                                               full_ensemble_joint_entropy, beta_threshold,
-                                                               verbose=verbose)
+            full_ensemble_joint_entropy, full_ensemble_transinformation, beta_threshold, verbose=verbose)
         joint_entropies.append(joint_entropy)
         transinformations.append(transinformation) if transinformation is not None else None
         if stop:
@@ -231,5 +299,6 @@ def select_ensemble_members(all_ensemble_members: dict, observations: Union[list
             "transinformation": transinformations if len(transinformations) > 0 else None
         },
         "selected_members": set(disc_ensemble_members_remaining.keys()),
-        "original_ensemble_joint_entropy": full_ensemble_joint_entropy
+        "original_ensemble_joint_entropy": full_ensemble_joint_entropy,
+        "original_ensemble_transinformation": full_ensemble_transinformation
     }

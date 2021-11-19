@@ -50,7 +50,7 @@ selection_log = enems.select_ensemble_members(data_ensemble, data_obsv)
 
 The variable ```selection_log``` will be a dictionary containing a log of the *total correlation*, *joint antropy* and (if an observation was given) the *transinformation* of the given and selected datasets. It also contains, as expected, the ids of the selected ensemble members.
 
-## Example
+## Example 1: No observation data available
 
 Mock data for a dataset with 75 supposed ensemble members and without observation records can be obtained with the function ```enems.load_data_75()```.
 
@@ -131,6 +131,59 @@ Which would give us the following plot:
 ![](docs/ensemble_selected.svg)
 *ensemble_selected.svg*
 
+## Example 2:
+
+Additional mock observation data compatible with the mock ensemble members is distributed with the package. It can be accessed using the funcion ```enems.load_data_obs()```.
+
+An example on how to use it to trigger the full version of the algorithm can is presented:
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+import enems
+
+if __name__ == "__main__":
+
+    # ## LOAD DATA ################################################################################################### #
+
+	test_data_obs = enems.load_data_obs().values
+    test_data_df = enems.load_data_75()
+    test_data = test_data_df.to_dict("list")
+
+	# ## PLOT FUNCTIONS ############################################################################################## #
+
+    def plot_ensemble_members([...]):
+		[...]
+
+	def plot_log([...]):
+        [...]
+
+	# ## FUNCTIONS CALL ############################################################################################## #
+
+    cur_selection_log = enems.select_ensemble_members(test_data, test_data_obs, n_bins=10, bin_by="equal_intervals",
+                                                      beta_threshold=0.95, n_processes=1, verbose=False)
+
+    plot_log(len(test_data.keys()), cur_selection_log, "test/log_obs.svg")
+    plot_ensemble_members(test_data, test_data_obs, set(test_data.keys()),
+                          "All members (%d)" % len(test_data.keys()),
+                          "test/ensemble_all_obs.svg")
+    plot_ensemble_members(test_data, test_data_obs, cur_selection_log["selected_members"],
+                          "Selected members (%d)" % len(cur_selection_log["selected_members"]),
+                          "test/ensemble_selected_obs.svg")
+
+    del test_data_obs, cur_selection_log
+```
+
+Which would give us the following plot:
+
+![](docs/log.svg)
+*log_obs.svg*
+
+![](docs/ensemble_all.svg)
+*ensemble_all_obs.svg*
+
+![](docs/ensemble_selected.svg)
+*ensemble_selected_obs.svg*
 
 ## Further documentation
 
