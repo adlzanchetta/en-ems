@@ -11,7 +11,9 @@ The *en-ems* package is built over the [pyitlib](https://pypi.org/project/pyitli
 
 The library can be installed using the traditional pip:
 
-    pip install en-ems
+```bash
+pip install en-ems
+```
 
 And is listed on the Python Package Index (*pypi*) as [en-ems](https://pypi.org/project/en-ems/).
 
@@ -33,7 +35,7 @@ In which the columns starting with "Memb_" hold the realization of one ensemble 
 
 If your our objective is to select a MECE set considering obaservations, it can be done using the standard parameters by:
 
-```
+```python
 import pandas as pd
 import enems
 
@@ -43,19 +45,95 @@ data_obsv = data_ensemble["Obsv"]
 del data_ensemble["Obsv"], data_ensemble["Date"]
 
 # perform selection
-selected_members = enems.select_ensemble_members(data_ensemble, data_obsv)
+selection_log = enems.select_ensemble_members(data_ensemble, data_obsv)
 ```
 
-The variable ```selected_members``` will be a dictionary with the following keys and values:
+The variable ```selection_log``` will be a dictionary containing a log of the *total correlation*, *joint antropy* and (if an observation was given) the *transinformation* of the given and selected datasets. It also contains, as expected, the ids of the selected ensemble members.
 
-- **history**: dictionary with the following additional information related with the selection process:
-	- **total_correlation**: list of floats
-	- **joint_entropy**: list of floats
-	- **transinformation**: list of floats or ```None```
-- **selected_members**: list of string with the labels of the selected elements
-- **original_ensemble_joint_entropy**: float
+## Example
+
+Mock data for a dataset with 75 supposed ensemble members and without observation records can be obtained with the function ```enems.load_data_75()```.
+
+Here is a full example on how we can access the mock data, select a MECE subset and visualize the results using the popular ```matplotlib``` is given:
+
+```python
+import matplotlib.pyplot as plt
+import enems
+
+if __name__ == "__main__":
+
+    # ## LOAD DATA ################################################################################################### #
+
+    test_data_df = enems.load_data_75()
+    test_data = test_data_df.to_dict("list")
+
+    # ## SELECT MECE SUBSET ########################################################################################## #
+
+    selection_log = enems.select_ensemble_members(test_data, None, n_bins=10, bin_by="equal_intervals", 
+                                                  beta_threshold=0.95, n_processes=1, verbose=False)
+
+    # ## PLOT FUNCTIONS ############################################################################################## #
+
+    def plot_ensemble_members(all_series: dict, selected_series: set, plot_title: str, output_file_path: str) -> None:
+        _, axs = plt.subplots(1, 1, figsize=(7, 2.5))
+        axs.set_xlabel("Time")
+        axs.set_ylabel("Value")
+        axs.set_title(plot_title)
+        axs.set_xlim(0, 143)
+        axs.set_ylim(0, 5)
+        [axs.plot(all_series[series_id], color="#999999", zorder=3, alpha=0.33) for series_id in selected_series]
+        plt.tight_layout()
+        plt.savefig(output_file_path)
+        plt.close()
+        return None
+
+    def plot_log(n_total_members: int, log: dict, output_file_path: str) -> None:
+        _, axss = plt.subplots(1, 2, figsize=(7.0, 2.5))
+        x_values=[n_total_members-i-1 for i in range(len(log["history"]["total_correlation"]))]
+        axss[0].set_xlabel("Time")
+        axss[0].set_ylabel("Total correlation")
+        axss[0].plot(x_values, log["history"]["total_correlation"], color="#7777FF", zorder=3)
+        axss[0].set_ylim(70, 140)
+        axss[0].set_xlim(x_values[0], x_values[-1])
+        axss[1].set_xlabel("Time")
+        axss[1].set_ylabel("Joint entropy")
+        axss[1].axhline(log["original_ensemble_joint_entropy"], color="#FF7777", zorder=3, label="Full set")
+        axss[1].plot(x_values, log["history"]["joint_entropy"], color="#7777FF", zorder=3, label="Selected set")
+        axss[1].set_ylim(6.3, 6.9)
+        axss[1].set_xlim(x_values[0], x_values[-1])
+        axss[1].legend()
+        plt.tight_layout()
+        plt.savefig(output_file_path)
+        plt.close()
+        return None
+
+    # ## FUNCTIONS CALL ############################################################################################## #
+
+    plot_log(len(test_data.keys()), selection_log, "test/log.svg")
+
+    plot_ensemble_members(test_data, set(test_data.keys()),
+                          "All members (%d)" % len(test_data.keys()),
+                          "test/ensemble_all.svg")
+
+    plot_ensemble_members(test_data, selection_log["selected_members"],
+                          "Selected members (%d)" % len(selection_log["selected_members"]),
+                          "test/ensemble_selected.svg")
+```
+
+Which would give us the following plot:
+
+![](docs/log.svg)
+*log.svg*
+
+![](docs/ensemble_all.svg)
+*ensemble_all.svg*
+
+![](docs/ensemble_selected.svg)
+*ensemble_selected.svg*
 
 
 ## Further documentation
 
-Further information can be found in the *docs* folder of this project.
+Further information about the library can be found in the *docs* folder of the Git repository of this project.
+
+The users are can find the complete theoretical explanation and assessment of the method in the original work of [Darbandsari and Coulibaly (2020)](http://doi.org/https://doi.org/10.1016/j.jhydrol.2020.125577).

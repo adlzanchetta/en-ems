@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="en-ems",
-    version="0.2.0",
+    version="0.2.1",
     url="https://gitlab.com/adlzanchetta_phd-codes/en-ems",
     author="Andre D. L. Zanchetta",
     author_email="adlzanchetta@gmail.com",
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
-    install_requires=["pyitlib==0.2.2", "scikit-learn==0.23"],
+    install_requires=["pyitlib==0.2.2", "scikit-learn>=0.23,<1", "pandas>=1.3"],
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",

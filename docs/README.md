@@ -72,4 +72,15 @@ Main function of the package. Performs the selection.
 
 **Return**
 
-Set with the keys of the selected members.
+A dictionary with the following structure concerning the progress of the members selection:
+
+{
+
+- *history*: {
+  - *total\_correlation*: list of floats;
+  - *joint_entropy*: list of floats;
+  - *transinformation*: list of floats (if the *observations* argument is provided and not *None*) or *None* (otherwise)
+- *selected\_members*: list of string with the labels of the selected elements;
+- *original\_ensemble\_joint_entropy*: float
+
+}
