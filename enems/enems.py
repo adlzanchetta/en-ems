@@ -71,8 +71,14 @@ def _discretize_if_needed(data: Union[dict, None], n_bins: Union[int, None], bin
         # categorize
         return dict([(k, _categorize_by_intervals(v, intervals, labels)) for k, v in data.items()])
     
-    elif bin_by in {'equal_value_intervals'}:
-        raise NotImplementedError("Binning '%s' not yet implemented." % bin_by)
+    elif bin_by in {'equal_intervals'}:
+        # define intervals
+        all_values = np.array([v for v in data.values()]).flatten()
+        intervals = sorted(list(set(pd.cut(all_values, bins=n_bins))))
+        del all_values
+
+        # categorize
+        return dict([(k, _categorize_by_intervals(v, intervals, labels)) for k, v in data.items()])
 
     else:
         raise ValueError("Binning by '%s' not supported." % bin_by)
@@ -160,7 +166,7 @@ def load_data_75():
     
 
 def select_ensemble_members(all_ensemble_members: dict, observations: Union[list, tuple, np.array, None] = None,
-                            n_bins: Union[int, None] = 10, bin_by: str = 'quantile_individual',
+                            n_bins: int = 10, bin_by: str = 'quantile_individual',
                             beta_threshold: float = 0.9, n_processes: int = 1, minimum_n_members: int = 2, 
                             verbose: bool = False) -> dict:
     """
@@ -168,9 +174,16 @@ def select_ensemble_members(all_ensemble_members: dict, observations: Union[list
     """
 
     # basic checks
-    # TODO: n_bins must be a positive integer
-    # TODO: beta threshold should be between 0 and 1
-    # TODO: n_processes should be and integer greater than 0
+    if (type(n_bins) is not int) or (n_bins <= 0):
+        raise ValueError("Argument 'n_bins' must be a positive integer. Got: {0} ({1}).".format(n_bins, type(n_bins)))
+    elif (beta_threshold < 0) or (beta_threshold > 1):
+        raise ValueError("Argument 'beta_threshold' must be a float between 0 and 1. Got: {0}.".format(beta_threshold))
+    elif (type(n_processes) is not int) or (n_processes < 1):
+        raise ValueError("Argument 'n_processes' must be a positive integer. Got: {0} ({1}).".format(n_processes,
+            type(n_processes)))
+    elif (type(minimum_n_members) is not int) or (minimum_n_members < 2):
+        raise ValueError("Argument 'minimum_n_members' must be a integer equal or bigger than 2. Got: {0} ({1}).".format(
+            minimum_n_members, type(minimum_n_members)))
 
     # discretize data if needed
     disc_ensemble_members_remaining = _discretize_if_needed(all_ensemble_members, n_bins, bin_by)

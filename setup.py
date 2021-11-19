@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="en-ems",
-    version="0.1.3",
+    version="0.2.0",
     url="https://gitlab.com/adlzanchetta_phd-codes/en-ems",
     author="Andre D. L. Zanchetta",
     author_email="adlzanchetta@gmail.com",
