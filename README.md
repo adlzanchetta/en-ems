@@ -176,13 +176,13 @@ if __name__ == "__main__":
 
 Which would give us the following plot:
 
-![](docs/log.svg)
+![](docs/log_obs.svg)
 *log_obs.svg*
 
-![](docs/ensemble_all.svg)
+![](docs/ensemble_all_obs.svg)
 *ensemble_all_obs.svg*
 
-![](docs/ensemble_selected.svg)
+![](docs/ensemble_selected_obs.svg)
 *ensemble_selected_obs.svg*
 
 ## Further documentation

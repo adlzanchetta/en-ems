@@ -5,8 +5,8 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="en-ems",
-    version="0.2.1",
-    url="https://gitlab.com/adlzanchetta_phd-codes/en-ems",
+    version="0.2.2",
+    url="https://github.com/adlzanchetta/en-ems",
     author="Andre D. L. Zanchetta",
     author_email="adlzanchetta@gmail.com",
     description="A package for selecting ensemble members using entropy theory",
